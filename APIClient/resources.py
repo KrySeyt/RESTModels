@@ -1,7 +1,9 @@
 import re
+from functools import partial
+from http import HTTPMethod
 from enum import Enum
 from inspect import signature
-from typing import Callable, TypeVar, Any, get_type_hints, Sequence, Iterable, ParamSpec, Mapping
+from typing import Callable, TypeVar, Any, get_type_hints, Sequence, Iterable, ParamSpec, Mapping, Collection
 from .clients import Client
 
 
@@ -29,8 +31,7 @@ def get_args_dict(
 def build_path(path_pattern: str, params: dict[str, Any], exclude_params: bool = False) -> str:
     composed_path = path_pattern
 
-    pattern = re.compile(r"\{\w+}")
-    matches = re.findall(pattern, composed_path)
+    matches = re.findall(r"\{\w+}", composed_path)
     for match in matches:
         param = params.pop(match[1:-1]) if exclude_params else params[match[1:-1]]
         composed_path = composed_path.replace(match, str(param))
@@ -38,8 +39,8 @@ def build_path(path_pattern: str, params: dict[str, Any], exclude_params: bool =
     return composed_path
 
 
-def build_body(
-        body_params: Iterable[str],
+def build_body(  # type: ignore[return]
+        body_params: Collection[str],
         params: dict[str, Any],
         body_type: BodyType,
         exclude_params: bool = False
@@ -51,152 +52,57 @@ def build_body(
                 body[body_param_name] = params.pop(body_param_name) if exclude_params else params[body_param_name]
             return body
 
-        case BodyType.FLAT:
+        case BodyType.FLAT if len(body_params) <= 1:
             param_name = next(iter(body_params))
             param = params.pop(param_name) if exclude_params else params[param_name]
             return str(param)
+
+        case BodyType.FLAT if len(body_params) > 1:
+            raise ValueError(f"{body_type} cannot be set with more than one body param")
+
+        case _:
+            raise ValueError(f"Can't build body with type {body_type}")
 
 
 ArgsType = ParamSpec("ArgsType")
 ReturnType = TypeVar("ReturnType")
 
 
-def get(endpoint_path: str) -> Callable[
+def create_request_decorator(
+        endpoint_path: str,
+        request_type: HTTPMethod,
+        body: Sequence[str] = tuple(),
+        body_type: BodyType = BodyType.EMBEDDED,
+) -> Callable[
     [
         Callable[ArgsType, ReturnType]
     ],
     Callable[ArgsType, ReturnType]
 ]:
 
-    def request_decorator(func: Callable[ArgsType, ReturnType]) -> Callable[ArgsType, ReturnType]:
-        def request(*args: ArgsType.args, **kwargs: ArgsType.kwargs) -> ReturnType:
-            params = get_args_dict(signature(func).parameters.keys(), args, kwargs)
-            path = build_path(endpoint_path, params, exclude_params=True)
-            model = params.pop("self")
-
-            data = model.client.get(path, params)
-
-            if not isinstance(data, get_type_hints(func)["return"]):
-                raise ValueError
-
-            return data  # type: ignore
-
-        return request
-
-    return request_decorator
-
-
-def post(endpoint_path: str, body: Sequence[str] = tuple(), body_type: BodyType = BodyType.EMBEDDED) -> Callable[
-    [
-        Callable[ArgsType, ReturnType]
-    ],
-    Callable[ArgsType, ReturnType]
-]:
-
-    if len(body) > 1 and body_type is BodyType.FLAT:
-        raise ValueError("BodyType.RAW cannot be set with more than one body param")
-
-    def request_decorator(func: Callable[ArgsType, ReturnType]) -> Callable[ArgsType, ReturnType]:
+    def decorator(func: Callable[ArgsType, ReturnType]) -> Callable[ArgsType, ReturnType]:
         def request(*args: ArgsType.args, **kwargs: ArgsType.kwargs) -> ReturnType:
             params = get_args_dict(signature(func).parameters.keys(), args, kwargs)
             path = build_path(endpoint_path, params, exclude_params=True)
             model = params.pop("self")
             request_body = build_body(body, params, body_type, exclude_params=True)
 
-            data = model.client.post(path, params, request_body)
+            data = model.client.request(path, request_type, params, request_body)
 
-            if not isinstance(data, get_type_hints(func)["return"]):
-                raise ValueError
+            expected_type = get_type_hints(func)["return"]
 
-            return data  # type: ignore
-
-        return request
-
-    return request_decorator
-
-
-def delete(endpoint_path: str, body: Sequence[str] = tuple(), body_type: BodyType = BodyType.EMBEDDED) -> Callable[
-    [
-        Callable[ArgsType, ReturnType]
-    ],
-    Callable[ArgsType, ReturnType]
-]:
-
-    if len(body) > 1 and body_type is BodyType.FLAT:
-        raise ValueError("BodyType.RAW cannot be set with more than one body param")
-
-    def request_decorator(func: Callable[ArgsType, ReturnType]) -> Callable[ArgsType, ReturnType]:
-        def request(*args: ArgsType.args, **kwargs: ArgsType.kwargs) -> ReturnType:
-            params = get_args_dict(signature(func).parameters.keys(), args, kwargs)
-            path = build_path(endpoint_path, params, exclude_params=True)
-            model = params.pop("self")
-            request_body = build_body(body, params, body_type, exclude_params=True)
-
-            data = model.client.delete(path, params, request_body)
-
-            if not isinstance(data, get_type_hints(func)["return"]):
-                raise ValueError
-
-            return data  # type: ignore
+            try:
+                return expected_type(data)  # type: ignore
+            except TypeError:
+                raise TypeError(f"Can't convert actual type {type(data)} to expected {expected_type}")
 
         return request
 
-    return request_decorator
+    return decorator
 
 
-def put(endpoint_path: str, body: Sequence[str] = tuple(), body_type: BodyType = BodyType.EMBEDDED) -> Callable[
-    [
-        Callable[ArgsType, ReturnType]
-    ],
-    Callable[ArgsType, ReturnType]
-]:
-
-    if len(body) > 1 and body_type is BodyType.FLAT:
-        raise ValueError("BodyType.RAW cannot be set with more than one body param")
-
-    def request_decorator(func: Callable[ArgsType, ReturnType]) -> Callable[ArgsType, ReturnType]:
-        def request(*args: ArgsType.args, **kwargs: ArgsType.kwargs) -> ReturnType:
-            params = get_args_dict(signature(func).parameters.keys(), args, kwargs)
-            path = build_path(endpoint_path, params, exclude_params=True)
-            model = params.pop("self")
-            request_body = build_body(body, params, body_type, exclude_params=True)
-
-            data = model.client.put(path, params, request_body)
-
-            if not isinstance(data, get_type_hints(func)["return"]):
-                raise ValueError
-
-            return data  # type: ignore
-
-        return request
-
-    return request_decorator
-
-
-def patch(endpoint_path: str, body: Sequence[str] = tuple(), body_type: BodyType = BodyType.EMBEDDED) -> Callable[
-    [
-        Callable[ArgsType, ReturnType]
-    ],
-    Callable[ArgsType, ReturnType]
-]:
-
-    if len(body) > 1 and body_type is BodyType.FLAT:
-        raise ValueError("BodyType.RAW cannot be set with more than one body param")
-
-    def request_decorator(func: Callable[ArgsType, ReturnType]) -> Callable[ArgsType, ReturnType]:
-        def request(*args: ArgsType.args, **kwargs: ArgsType.kwargs) -> ReturnType:
-            params = get_args_dict(signature(func).parameters.keys(), args, kwargs)
-            path = build_path(endpoint_path, params, exclude_params=True)
-            model = params.pop("self")
-            request_body = build_body(body, params, body_type, exclude_params=True)
-
-            data = model.client.patch(path, params, request_body)
-
-            if not isinstance(data, get_type_hints(func)["return"]):
-                raise ValueError
-
-            return data  # type: ignore
-
-        return request
-
-    return request_decorator
+get = partial(create_request_decorator, request_type=HTTPMethod.GET)
+post = partial(create_request_decorator, request_type=HTTPMethod.POST)
+delete = partial(create_request_decorator, request_type=HTTPMethod.DELETE)
+put = partial(create_request_decorator, request_type=HTTPMethod.PUT)
+patch = partial(create_request_decorator, request_type=HTTPMethod.PATCH)

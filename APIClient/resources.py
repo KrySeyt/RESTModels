@@ -3,7 +3,20 @@ from functools import partial
 from http import HTTPMethod
 from enum import Enum
 from inspect import signature
-from typing import Callable, TypeVar, Any, get_type_hints, Sequence, Iterable, ParamSpec, Mapping, Collection
+from typing import (
+    Callable,
+    TypeVar,
+    Any,
+    Sequence,
+    Iterable,
+    ParamSpec,
+    Mapping,
+    Collection,
+    NoReturn,
+    Type,
+    get_type_hints
+)
+
 from .clients import Client
 
 
@@ -64,6 +77,34 @@ def build_body(  # type: ignore[return]
             raise ValueError(f"Can't build body with type {body_type}")
 
 
+ExpectedType = TypeVar("ExpectedType")
+
+
+def try_parse_response_content(
+        response_content: Any,
+        expected_type: Callable[..., ExpectedType]
+) -> ExpectedType | NoReturn:
+
+    try:
+        return expected_type(response_content)
+    except TypeError:
+        pass
+
+    if isinstance(response_content, Mapping):
+        try:
+            return expected_type(**response_content)
+        except TypeError:
+            pass
+
+    if isinstance(response_content, Iterable):
+        try:
+            return expected_type(*response_content)
+        except TypeError:
+            pass
+
+    raise TypeError(f"Can't convert actual type {type(response_content)} to expected {expected_type}")
+
+
 ArgsType = ParamSpec("ArgsType")
 ReturnType = TypeVar("ReturnType")
 
@@ -88,13 +129,9 @@ def create_request_decorator(
             request_body = build_body(body, params, body_type, exclude_params=True)
 
             data = model.client.request(path, request_type, params, request_body)
+            expected_type: Type[ReturnType] = get_type_hints(func)["return"]
 
-            expected_type = get_type_hints(func)["return"]
-
-            try:
-                return expected_type(data)  # type: ignore
-            except TypeError:
-                raise TypeError(f"Can't convert actual type {type(data)} to expected {expected_type}")
+            return try_parse_response_content(data, expected_type)
 
         return request
 

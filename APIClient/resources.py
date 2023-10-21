@@ -86,7 +86,7 @@ def get(endpoint_path: str) -> Callable[
     return request_decorator
 
 
-def post(endpoint_path: str, body: Sequence[str], body_type: BodyType = BodyType.EMBEDDED) -> Callable[
+def post(endpoint_path: str, body: Sequence[str] = tuple(), body_type: BodyType = BodyType.EMBEDDED) -> Callable[
     [
         Callable[ArgsType, ReturnType]
     ],
@@ -104,6 +104,93 @@ def post(endpoint_path: str, body: Sequence[str], body_type: BodyType = BodyType
             request_body = build_body(body, params, body_type, exclude_params=True)
 
             data = model.client.post(path, params, request_body)
+
+            if not isinstance(data, get_type_hints(func)["return"]):
+                raise ValueError
+
+            return data  # type: ignore
+
+        return request
+
+    return request_decorator
+
+
+def delete(endpoint_path: str, body: Sequence[str] = tuple(), body_type: BodyType = BodyType.EMBEDDED) -> Callable[
+    [
+        Callable[ArgsType, ReturnType]
+    ],
+    Callable[ArgsType, ReturnType]
+]:
+
+    if len(body) > 1 and body_type is BodyType.FLAT:
+        raise ValueError("BodyType.RAW cannot be set with more than one body param")
+
+    def request_decorator(func: Callable[ArgsType, ReturnType]) -> Callable[ArgsType, ReturnType]:
+        def request(*args: ArgsType.args, **kwargs: ArgsType.kwargs) -> ReturnType:
+            params = get_args_dict(signature(func).parameters.keys(), args, kwargs)
+            path = build_path(endpoint_path, params, exclude_params=True)
+            model = params.pop("self")
+            request_body = build_body(body, params, body_type, exclude_params=True)
+
+            data = model.client.delete(path, params, request_body)
+
+            if not isinstance(data, get_type_hints(func)["return"]):
+                raise ValueError
+
+            return data  # type: ignore
+
+        return request
+
+    return request_decorator
+
+
+def put(endpoint_path: str, body: Sequence[str] = tuple(), body_type: BodyType = BodyType.EMBEDDED) -> Callable[
+    [
+        Callable[ArgsType, ReturnType]
+    ],
+    Callable[ArgsType, ReturnType]
+]:
+
+    if len(body) > 1 and body_type is BodyType.FLAT:
+        raise ValueError("BodyType.RAW cannot be set with more than one body param")
+
+    def request_decorator(func: Callable[ArgsType, ReturnType]) -> Callable[ArgsType, ReturnType]:
+        def request(*args: ArgsType.args, **kwargs: ArgsType.kwargs) -> ReturnType:
+            params = get_args_dict(signature(func).parameters.keys(), args, kwargs)
+            path = build_path(endpoint_path, params, exclude_params=True)
+            model = params.pop("self")
+            request_body = build_body(body, params, body_type, exclude_params=True)
+
+            data = model.client.put(path, params, request_body)
+
+            if not isinstance(data, get_type_hints(func)["return"]):
+                raise ValueError
+
+            return data  # type: ignore
+
+        return request
+
+    return request_decorator
+
+
+def patch(endpoint_path: str, body: Sequence[str] = tuple(), body_type: BodyType = BodyType.EMBEDDED) -> Callable[
+    [
+        Callable[ArgsType, ReturnType]
+    ],
+    Callable[ArgsType, ReturnType]
+]:
+
+    if len(body) > 1 and body_type is BodyType.FLAT:
+        raise ValueError("BodyType.RAW cannot be set with more than one body param")
+
+    def request_decorator(func: Callable[ArgsType, ReturnType]) -> Callable[ArgsType, ReturnType]:
+        def request(*args: ArgsType.args, **kwargs: ArgsType.kwargs) -> ReturnType:
+            params = get_args_dict(signature(func).parameters.keys(), args, kwargs)
+            path = build_path(endpoint_path, params, exclude_params=True)
+            model = params.pop("self")
+            request_body = build_body(body, params, body_type, exclude_params=True)
+
+            data = model.client.patch(path, params, request_body)
 
             if not isinstance(data, get_type_hints(func)["return"]):
                 raise ValueError

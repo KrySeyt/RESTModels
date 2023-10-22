@@ -80,7 +80,7 @@ def build_body(  # type: ignore[return]
 ExpectedType = TypeVar("ExpectedType")
 
 
-def try_parse_response_content(
+def try_parse_response_content(  # TODO: mb protocol?
         response_content: Any,
         expected_type: Callable[..., ExpectedType]
 ) -> ExpectedType | NoReturn:
@@ -102,7 +102,8 @@ def try_parse_response_content(
         except TypeError:
             pass
 
-    raise TypeError(f"Can't convert actual type {type(response_content)} to expected {expected_type}")
+    raise TypeError(f"Can't convert value {response_content} with "
+                    f"type {type(response_content)} to expected {expected_type}")
 
 
 ArgsType = ParamSpec("ArgsType")

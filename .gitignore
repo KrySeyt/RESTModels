@@ -1,7 +1,8 @@
-venv
-__pycache__
-.idea
-.mypy_cache
-.pytest_cache
-.ruff_cache
+venv/
+__pycache__/
+.idea/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
 *.egg-info
+dist/

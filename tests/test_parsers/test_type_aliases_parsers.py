@@ -78,6 +78,34 @@ def test_parse_tuple():
         assert type(result) == expected_type
 
 
+def test_parse_list():
+    type_alias_parser = TypeAliasParser()
+
+    input_datas = (
+        (1, 2),
+        ("ez",),
+    )
+    expected_type = list
+
+    for result in (type_alias_parser(data, expected_type) for data in input_datas):
+        assert type(result) == expected_type
+
+
+def test_parse_set():
+    type_alias_parser = TypeAliasParser()
+
+    input_datas = (
+        (1, 2),
+        ("ez",),
+    )
+    expected_type = set
+
+    expected_results = ({1, 2}, {"ez"})
+
+    for data, expected_result in zip(input_datas, expected_results):
+        assert type_alias_parser(data, expected_type) == expected_result
+
+
 def test_parse_tuple_with_nested():
     type_alias_parser = TypeAliasParser()
 
@@ -139,6 +167,36 @@ def test_parse_list_with_nested():
     expected_result = [
         [1, 2],
         [3, 4],
+    ]
+
+    assert type_alias_parser(input_data, expected_type) == expected_result
+
+
+def test_parse_set_with_nested():
+    type_alias_parser = TypeAliasParser()
+
+    input_datas = (
+        ["1"],
+        ["1", "2", "3"],
+        (5, 6.0, "10"),
+    )
+    expected_type = set[int]
+
+    expected_results = (
+        {1},
+        {1, 2, 3},
+        {5, 6, 10},
+    )
+
+    for data, expected_result in zip(input_datas, expected_results):
+        assert type_alias_parser(data, expected_type) == expected_result
+
+    input_data = [[1, 2], ["3", "4"]]
+    expected_type = list[set[int]]
+
+    expected_result = [
+        {1, 2},
+        {3, 4},
     ]
 
     assert type_alias_parser(input_data, expected_type) == expected_result

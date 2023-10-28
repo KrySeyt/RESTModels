@@ -102,3 +102,11 @@ def list_alias_parser(value: Any, alias: GenericAlias, alias_parser: TypeAliasPa
         return [alias_parser(elem, origin_type_alias) for elem in value]
 
     return list(value)
+
+
+def set_alias_parser(value: Any, alias: GenericAlias, alias_parser: TypeAliasParser) -> Any:
+    if hasattr(alias, "__args__"):
+        origin_type_alias = alias.__args__[0]
+        return {alias_parser(elem, origin_type_alias) for elem in value}
+
+    return set(value)

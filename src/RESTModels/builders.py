@@ -15,6 +15,7 @@ def build_path(path_pattern: str, params: dict[str, Any], exclude_params: bool =
     return composed_path
 
 
+# I think here is mypy bug on return type check
 def build_body(  # type: ignore[return]
         body_params: Collection[str],
         params: dict[str, Any],

@@ -208,11 +208,11 @@ def test_parse_nested_collections():
     input_data = [
         [
             [
-                "test", "nested",
+                5, 10,
             ]
         ],
         [
-            "another",
+            15,
         ]
     ]
     expected_type = tuple[tuple[tuple[str, str]], tuple[str]]
@@ -220,11 +220,11 @@ def test_parse_nested_collections():
     expected_result = (
         (
             (
-                "test", "nested",
+                "5", "10",
             ),
         ),
         (
-          "another",
+          "15",
         ),
     )
 

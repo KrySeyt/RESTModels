@@ -1,12 +1,13 @@
 from datetime import datetime
 
-from .response_parsers import ResponseParser
-from . import types_parsers as tp
+from .type_alias_parsers import TypeAliasParser
+from . import type_alias_parsers as tp
 
 
-simple_parse_types = (int, float, str)
-for type_ in simple_parse_types:
-    ResponseParser.register_general_type_parser(type_, type_)
-
-ResponseParser.register_general_type_parser(bytes, tp.bytes_parser)
-ResponseParser.register_general_type_parser(datetime, tp.datetime_parser)
+TypeAliasParser.register_general_type_parser(int, tp.int_alias_parser)
+TypeAliasParser.register_general_type_parser(float, tp.float_alias_parser)
+TypeAliasParser.register_general_type_parser(str, tp.str_alias_parser)
+TypeAliasParser.register_general_type_parser(bytes, tp.bytes_alias_parser)
+TypeAliasParser.register_general_type_parser(datetime, tp.datetime_alias_parser)
+TypeAliasParser.register_general_type_parser(tuple, tp.tuple_alias_parser)
+TypeAliasParser.register_general_type_parser(list, tp.list_alias_parser)

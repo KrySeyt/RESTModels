@@ -13,6 +13,7 @@ from functools import partial
 from .resources import BodyType
 from .parsers.args_parsers import get_args_dict
 from .parsers.response_parsers import ResponseParser
+from .parsers.type_alias_parsers import TypeAliasParser
 from .builders import build_body, build_path
 
 
@@ -41,7 +42,9 @@ def create_request_decorator(
 
             response = model.client.request(path, request_type, params, request_body)
             expected_type: Type[ReturnType] = get_type_hints(func)["return"]  # mb get from inspect.signature?
-            response_parser = ResponseParser()
+
+            type_aliases_parser = TypeAliasParser()
+            response_parser = ResponseParser(type_aliases_parser)
 
             return response_parser(response, expected_type)
 

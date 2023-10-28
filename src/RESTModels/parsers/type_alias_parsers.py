@@ -57,7 +57,7 @@ class TypeAliasParser:
         return parser(value, alias=type_alias, alias_parser=self)  # type: ignore[no-any-return]
 
 
-# TODO: Types, types, types!\
+# TODO: Types, types, types!
 def str_alias_parser(value: Any, alias: GenericAlias, alias_parser: TypeAliasParser) -> Any:
     return str(value)
 

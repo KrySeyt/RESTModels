@@ -1,11 +1,4 @@
-from typing import (
-    ParamSpec,
-    TypeVar,
-    Sequence,
-    Callable,
-    Type,
-    get_type_hints
-)
+from typing import ParamSpec, TypeVar, Sequence, Callable, Type
 from http import HTTPMethod
 from inspect import signature
 from functools import partial
@@ -35,13 +28,14 @@ def create_request_decorator(
 
     def decorator(func: Callable[ArgsType, ReturnType]) -> Callable[ArgsType, ReturnType]:
         def request(*args: ArgsType.args, **kwargs: ArgsType.kwargs) -> ReturnType:
+
             params = get_args_dict(signature(func).parameters.keys(), args, kwargs)
             path = build_path(endpoint_path, params, exclude_params=True)
             model = params.pop("self")
             request_body = build_body(body, params, body_type, exclude_params=True)
 
             response = model.client.request(path, request_type, params, request_body)
-            expected_type: Type[ReturnType] = get_type_hints(func)["return"]  # mb get from inspect.signature?
+            expected_type: Type[ReturnType] = signature(func).return_annotation
 
             type_aliases_parser = TypeAliasParser()
             response_parser = ResponseParser(type_aliases_parser)

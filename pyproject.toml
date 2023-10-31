@@ -5,6 +5,10 @@ build-backend = "setuptools.build_meta"
 [tool.ruff]
 line-length = 120
 
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+
 [project]
 name = "RESTModels"
 version = "0.0.4"

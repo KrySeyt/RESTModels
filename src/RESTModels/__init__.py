@@ -7,6 +7,7 @@ from .requests import (
 )
 from .resources import ResourceModel
 from .clients import SyncClient
+from .parsers.type_alias_parsers import TypeAliasParser
 
 __all__ = [
     "get",
@@ -16,4 +17,7 @@ __all__ = [
     "patch",
     "ResourceModel",
     "SyncClient",
+    "register_general_type_parser",
 ]
+
+register_general_type_parser = TypeAliasParser.register_general_type_parser

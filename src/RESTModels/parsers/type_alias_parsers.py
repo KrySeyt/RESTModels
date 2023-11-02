@@ -1,5 +1,6 @@
+from decimal import Decimal
 from typing import Any, Type, TypeVar, get_origin, Protocol, cast
-from datetime import datetime
+from datetime import datetime, date, time, timedelta
 from collections import ChainMap
 from types import GenericAlias
 from itertools import zip_longest
@@ -37,7 +38,6 @@ class TypeAliasParser:
     def register_alias_parser(self, expected_type: type, parser: TypeParserProtocol) -> None:
         self.types_parsers[expected_type] = parser
 
-    # TODO: Type it correctly!
     @classmethod
     def register_general_alias_parser(cls, expected_type: type, parser: TypeParserProtocol) -> None:
         cls.general_types_parsers[expected_type] = parser
@@ -66,8 +66,16 @@ def int_alias_parser(value: Any, alias: GenericAlias, alias_parser: TypeAliasPar
     return int(value)
 
 
+def bool_alias_parser(value: Any, alias: GenericAlias, alias_parser: TypeAliasParser) -> bool:
+    return bool(value)
+
+
 def float_alias_parser(value: Any, alias: GenericAlias, alias_parser: TypeAliasParser) -> float:
     return float(value)
+
+
+def decimal_alias_parser(value: Any, alias: GenericAlias, alias_parser: TypeAliasParser) -> Decimal:
+    return Decimal(value)
 
 
 def bytes_alias_parser(value: Any, alias: GenericAlias, alias_parser: TypeAliasParser) -> bytes:
@@ -77,11 +85,25 @@ def bytes_alias_parser(value: Any, alias: GenericAlias, alias_parser: TypeAliasP
 
 
 def datetime_alias_parser(value: Any, alias: GenericAlias, alias_parser: TypeAliasParser) -> datetime:
-    if isinstance(value, datetime):
-        return value
     if isinstance(value, str):
         return datetime.fromisoformat(value)
     raise TypeAliasParseError(value, datetime)
+
+
+def date_alias_parser(value: Any, alias: GenericAlias, alias_parser: TypeAliasParser) -> date:
+    if isinstance(value, str):
+        return date.fromisoformat(value)
+    raise TypeAliasParseError(value, date)
+
+
+def time_alias_parser(value: Any, alias: GenericAlias, alias_parser: TypeAliasParser) -> time:
+    if isinstance(value, str):
+        return time.fromisoformat(value)
+    return time(value)
+
+
+def timedelta_alias_parser(value: Any, alias: GenericAlias, alias_parser: TypeAliasParser) -> timedelta:
+    return timedelta(value)
 
 
 def tuple_alias_parser(value: Any, alias: GenericAlias, alias_parser: TypeAliasParser) -> tuple[Any, ...]:
@@ -110,3 +132,11 @@ def set_alias_parser(value: Any, alias: GenericAlias, alias_parser: TypeAliasPar
         return {alias_parser(elem, origin_type_alias) for elem in value}
 
     return set(value)
+
+
+def frozenset_alias_parser(value: Any, alias: GenericAlias, alias_parser: TypeAliasParser) -> frozenset[Any]:
+    if hasattr(alias, "__args__"):
+        origin_type_alias = alias.__args__[0]
+        return frozenset(alias_parser(elem, origin_type_alias) for elem in value)
+
+    return frozenset(value)

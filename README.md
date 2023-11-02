@@ -33,7 +33,7 @@ print(model.get_todos(1))
 ```
 
 # More usage
-## Custom type parsers
+## Custom type alias parsers
 Create any object that implement protocol:
 ```python
 class TypeParserProtocol(Protocol):
@@ -47,7 +47,7 @@ class TypeParserProtocol(Protocol):
         raise NotImplementedError
 ```
 
-And register it as type parser for TypeAliasParser:
+And register it as type alias parser for TypeAliasParser:
 
 ```python
 from RESTModels import register_general_type_parser

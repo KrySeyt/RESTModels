@@ -167,3 +167,8 @@ def frozenset_alias_parser(value: Any, alias: GenericAlias, alias_parser: TypeAl
         return frozenset(alias_parser(elem, origin_type_alias) for elem in value)
 
     return frozenset(value)
+
+
+@TypeAliasParser.register_general_type_parser
+def none_alias_parser(value: Any, alias: GenericAlias, alias_parser: TypeAliasParser) -> None:
+    return

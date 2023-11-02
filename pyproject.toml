@@ -11,7 +11,7 @@ package-dir = {"" = "src"}
 
 [project]
 name = "RESTModels"
-version = "0.0.4"
+version = "1.0.1"
 authors = [
     { name="Sequew", email="kryseyt@gmail.com" },
 ]

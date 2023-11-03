@@ -1,19 +1,10 @@
 from inspect import get_annotations
 from decimal import Decimal
-from typing import Any, Type, TypeVar, get_origin, Protocol, cast
+from typing import Any, Type, TypeVar, get_origin, Protocol, cast, Union
 from datetime import datetime, date, time, timedelta
 from collections import ChainMap
 from types import GenericAlias
 from itertools import zip_longest
-
-
-class TypeAliasParseError(ValueError):
-    def __init__(self, value_for_parse: Any, expected_type: type, *args: Any, **kwargs: Any) -> None:
-        super().__init__(
-            f"Can't parse {value_for_parse} with type {type(value_for_parse)} to {expected_type}",
-            *args,
-            **kwargs
-        )
 
 
 T = TypeVar("T")
@@ -98,7 +89,7 @@ def decimal_alias_parser(value: Any, alias: GenericAlias, alias_parser: TypeAlia
 def bytes_alias_parser(value: Any, alias: GenericAlias, alias_parser: TypeAliasParser) -> bytes:
     if isinstance(value, str):
         return value.encode(encoding="utf-8")
-    raise TypeAliasParseError(value, bytes)
+    raise ValueError
 
 
 @TypeAliasParser.register_general_type_parser
@@ -107,14 +98,14 @@ def datetime_alias_parser(value: Any, alias: GenericAlias, alias_parser: TypeAli
         return value
     if isinstance(value, str):
         return datetime.fromisoformat(value)
-    raise TypeAliasParseError(value, datetime)
+    raise ValueError
 
 
 @TypeAliasParser.register_general_type_parser
 def date_alias_parser(value: Any, alias: GenericAlias, alias_parser: TypeAliasParser) -> date:
     if isinstance(value, str):
         return date.fromisoformat(value)
-    raise TypeAliasParseError(value, date)
+    raise ValueError
 
 
 @TypeAliasParser.register_general_type_parser
@@ -135,7 +126,7 @@ def tuple_alias_parser(value: Any, alias: GenericAlias, alias_parser: TypeAliasP
         values = []
         for elem, elem_type in zip_longest(value, alias.__args__):
             if (elem is None or elem_type is None) and not isinstance(elem, elem_type):
-                raise TypeAliasParseError(value, tuple)
+                raise ValueError
             values.append(alias_parser(elem, elem_type))
         return tuple(values)
 
@@ -172,3 +163,27 @@ def frozenset_alias_parser(value: Any, alias: GenericAlias, alias_parser: TypeAl
 @TypeAliasParser.register_general_type_parser
 def none_alias_parser(value: Any, alias: GenericAlias, alias_parser: TypeAliasParser) -> None:
     return
+
+
+@TypeAliasParser.register_general_type_parser
+def old_union_alias_parser(value: Any, alias: GenericAlias, alias_parser: TypeAliasParser) -> Union[Any, Any]:
+    if hasattr(alias, "__args__"):
+        for compatible_type_alias in alias.__args__:
+            try:
+                return alias_parser(value, compatible_type_alias)
+            except ValueError:
+                continue
+
+        raise ValueError
+
+
+@TypeAliasParser.register_general_type_parser
+def new_union_alias_parser(value: Any, alias: GenericAlias, alias_parser: TypeAliasParser) -> Union[Any, Any]:
+    if hasattr(alias, "__args__"):
+        for compatible_type_alias in alias.__args__:
+            try:
+                return alias_parser(value, compatible_type_alias)
+            except ValueError:
+                continue
+
+        raise ValueError

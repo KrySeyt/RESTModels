@@ -1,6 +1,6 @@
 from inspect import get_annotations
 from decimal import Decimal
-from typing import Any, Type, TypeVar, get_origin, Protocol, cast, Union
+from typing import Any, TypeVar, get_origin, Protocol, cast, Union
 from datetime import datetime, date, time, timedelta
 from collections import ChainMap
 from types import GenericAlias
@@ -28,10 +28,11 @@ class TypeParserProtocol(Protocol):
 
 
 class TypeAliasParser:
-    general_types_parsers: dict[type, TypeParserProtocol] = {}
+    general_types_parsers: dict[GenericAlias, TypeParserProtocol] = {}
 
     def __init__(self) -> None:
-        self.types_parsers: dict[type, TypeParserProtocol] = {}
+        print(self.general_types_parsers)
+        self.types_parsers: dict[GenericAlias, TypeParserProtocol] = {}
 
     def register_type_parser(self, parser: TypeParserProtocol) -> None:
         expected_type_alias = get_annotations(parser)["return"]
@@ -44,11 +45,13 @@ class TypeAliasParser:
         expected_type = get_origin(expected_type_alias) or expected_type_alias
         cls.general_types_parsers[expected_type] = parser
 
-    def __call__(self, value: Any, expected_type: Type[T]) -> T:
+    def __call__(self, value: Any, type_alias: GenericAlias) -> Any:
+        if isinstance(type_alias, type) and isinstance(value, type_alias):
+            return value
+
         parsers = ChainMap(self.types_parsers, self.general_types_parsers)
 
-        type_alias = cast(GenericAlias, expected_type)
-        most_general_type = get_origin(type_alias) or expected_type
+        most_general_type = cast(GenericAlias, get_origin(type_alias) or type_alias)
 
         if most_general_type not in parsers:
             raise ValueError(
@@ -57,7 +60,7 @@ class TypeAliasParser:
             )
 
         parser = parsers[most_general_type]
-        return parser(value, alias=type_alias, alias_parser=self)  # type: ignore[no-any-return]
+        return parser(value, alias=type_alias, alias_parser=self)
 
 
 @TypeAliasParser.register_general_type_parser
@@ -94,8 +97,6 @@ def bytes_alias_parser(value: Any, alias: GenericAlias, alias_parser: TypeAliasP
 
 @TypeAliasParser.register_general_type_parser
 def datetime_alias_parser(value: Any, alias: GenericAlias, alias_parser: TypeAliasParser) -> datetime:
-    if isinstance(value, datetime):
-        return value
     if isinstance(value, str):
         return datetime.fromisoformat(value)
     raise ValueError
@@ -166,7 +167,7 @@ def none_alias_parser(value: Any, alias: GenericAlias, alias_parser: TypeAliasPa
 
 
 @TypeAliasParser.register_general_type_parser
-def old_union_alias_parser(value: Any, alias: GenericAlias, alias_parser: TypeAliasParser) -> Union[Any, Any]:
+def old_union_alias_parser(value: Any, alias: GenericAlias, alias_parser: TypeAliasParser) -> Union[Any, str]:
     if hasattr(alias, "__args__"):
         for compatible_type_alias in alias.__args__:
             try:
@@ -174,11 +175,11 @@ def old_union_alias_parser(value: Any, alias: GenericAlias, alias_parser: TypeAl
             except ValueError:
                 continue
 
-        raise ValueError
+    raise ValueError
 
 
 @TypeAliasParser.register_general_type_parser
-def new_union_alias_parser(value: Any, alias: GenericAlias, alias_parser: TypeAliasParser) -> Union[Any, Any]:
+def new_union_alias_parser(value: Any, alias: GenericAlias, alias_parser: TypeAliasParser) -> Any | str:
     if hasattr(alias, "__args__"):
         for compatible_type_alias in alias.__args__:
             try:
@@ -186,4 +187,4 @@ def new_union_alias_parser(value: Any, alias: GenericAlias, alias_parser: TypeAl
             except ValueError:
                 continue
 
-        raise ValueError
+    raise ValueError

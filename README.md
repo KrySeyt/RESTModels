@@ -78,3 +78,11 @@ If your return type is generic, annotate it like Generic[Any] for static type ch
 Type of value that type parser returns determined by return type annotation
 
 If you register more than one parser for one type only last will be used
+
+Make sure that return type annotation does not turn into the type you do not expect. Example:
+```python
+>>> Union[Any]
+typing.Any
+>>> Any | Any
+typing.Any
+```

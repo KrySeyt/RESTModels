@@ -1,4 +1,5 @@
-from typing import TypeVar, Type, Any
+from typing import TypeVar, Type, Any, cast
+from types import GenericAlias
 
 from .type_alias_parsers import TypeAliasParser
 
@@ -15,7 +16,8 @@ class ResponseParser:
             return response
 
         try:
-            return self.type_alias_parser(response, expected_type)
+            type_alias = cast(GenericAlias, expected_type)
+            return self.type_alias_parser(response, type_alias)  # type: ignore[no-any-return]
 
         except ValueError as error:
             raise ValueError(

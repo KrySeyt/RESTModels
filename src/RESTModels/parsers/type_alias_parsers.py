@@ -7,9 +7,6 @@ from types import GenericAlias
 from itertools import zip_longest
 
 
-T = TypeVar("T")
-
-
 class TypeParserProtocol(Protocol):
     def __call__(
             self,
@@ -25,6 +22,9 @@ class TypeParserProtocol(Protocol):
         """
 
         raise NotImplementedError
+
+
+T = TypeVar("T")
 
 
 class TypeAliasParser:
@@ -45,9 +45,11 @@ class TypeAliasParser:
         expected_type = get_origin(expected_type_alias) or expected_type_alias
         cls.general_types_parsers[expected_type] = parser
 
-    def __call__(self, value: Any, type_alias: GenericAlias) -> Any:
-        if isinstance(type_alias, type) and isinstance(value, type_alias):
+    def __call__(self, value: Any, type_: Any) -> Any:
+        if isinstance(type_, type) and isinstance(value, type_):
             return value
+
+        type_alias = cast(GenericAlias, type_)
 
         parsers = ChainMap(self.types_parsers, self.general_types_parsers)
 
@@ -124,7 +126,7 @@ def timedelta_alias_parser(value: Any, alias: GenericAlias, alias_parser: TypeAl
 @TypeAliasParser.register_general_type_parser
 def tuple_alias_parser(value: Any, alias: GenericAlias, alias_parser: TypeAliasParser) -> tuple[Any, ...]:
     if hasattr(alias, "__args__"):
-        values = []
+        values: list[Any] = []
         for elem, elem_type in zip_longest(value, alias.__args__):
             if (elem is None or elem_type is None) and not isinstance(elem, elem_type):
                 raise ValueError
